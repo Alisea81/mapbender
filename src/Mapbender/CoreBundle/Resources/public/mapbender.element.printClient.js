@@ -260,7 +260,7 @@
                 if(null !== this.lastRotation) {
                     $('input[name="rotation"]').val(this.lastRotation).change();
                 }
-                return;
+                //return;
             }
             rotation= parseInt(-rotation);
 

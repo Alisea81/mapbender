@@ -30,10 +30,7 @@ class PrintService
     {
         $this->data = json_decode($content, true);
         $template = $this->data['template'];
-//        print "<pre>";
-//        print_r($this->data);
-//        print "</pre>";
-//        die();
+        
         $this->getTemplateConf($template);
         $this->createUrlArray();
         $this->addReplacePattern();
@@ -192,21 +189,27 @@ class PrintService
             $temp_names[] = $imagename;
 
             file_put_contents($imagename, $response->getContent());
-            $im = null;
+            $om = null;
             switch (trim($response->headers->get('content-type'))) {
                 case 'image/png' :
-                    $im = imagecreatefrompng($imagename);
+                    $om = imagecreatefrompng($imagename);
                     break;
                 case 'image/jpeg' :
-                    $im = imagecreatefromjpeg($imagename);
+                    $om = imagecreatefromjpeg($imagename);
                     break;
                 case 'image/gif' :
-                    $im = imagecreatefromgif($imagename);
+                    $om = imagecreatefromgif($imagename);
                     break;
                 default:
                     $this->container->get("logger")->debug("Unknown mimetype " . trim($response->headers->get('content-type')));
                     continue;
             }
+
+            // Make sure input image is truecolor with alpha, regardless of input mode!
+            $im = imagecreatetruecolor($this->image_width, $this->image_height);
+            imagealphablending($im, false);
+            imagesavealpha($im, true);            
+            imagecopyresampled($im, $om, 0, 0, 0, 0, $this->image_width, $this->image_height, $this->image_width, $this->image_height);
 
             if ($im !== null) {
                     imagealphablending($im, false);
@@ -220,8 +223,8 @@ class PrintService
                         for ($x = 0; $x < $width; $x++) {
                             for ($y = 0; $y < $height; $y++) {
                                 $colorIn = imagecolorsforindex($im, imagecolorat($im, $x, $y));
-                                $alphaOut = 127 - (127 - $colorIn['alpha']) * $opacity;
-
+                                $alphaOut = 127 - (127 - $colorIn['alpha']) * $opacity;                                
+                                
                                 $colorOut = imagecolorallocatealpha(
                                     $im,
                                     $colorIn['red'],
@@ -504,7 +507,7 @@ class PrintService
         }
         
         unlink($this->finalimagename);
-
+    
         if (null != $this->data['file_prefix']) {
             $pdf->Output($this->data['file_prefix'] . '.pdf', 'D'); //file output
         } else {
