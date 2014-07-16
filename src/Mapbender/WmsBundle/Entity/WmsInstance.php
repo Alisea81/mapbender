@@ -642,7 +642,7 @@ class WmsInstance extends SourceInstance
     {
         $this->layers->removeElement($layers);
     }
-    
+
     public function __toString()
     {
         return $this->getId();
@@ -667,7 +667,7 @@ class WmsInstance extends SourceInstance
     /**
      * @inheritdoc
      */
-    public function getAssets()
+    static public function listAssets()
     {
         return array(
             'js' => array(

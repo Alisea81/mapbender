@@ -2,10 +2,19 @@
 
 {% block title %}{{ 'mb.manager.admin.source.new.add' | trans }}{% endblock %}
 
+{% block css %}
+  {{parent()}}
+  {% stylesheets filter="compass,cssrewrite"
+    "bundles/mapbendermanager/sass/manager/services.scss"
+  %}
+    <link rel="stylesheet" href="{{ asset_url }}" />
+  {% endstylesheets %}
+{% endblock %}
+
 {% block manager_content %}
 
 {% for manager in managers %}
-  {% render manager.startAction %}
+  {% render controller(manager.startAction) %}
   <div class="clearContainer"></div>
 {% endfor %}
 

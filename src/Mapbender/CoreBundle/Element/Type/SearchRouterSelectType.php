@@ -41,9 +41,11 @@ class SearchRouterSelectType extends AbstractType
         $builder->add('route', 'choice', array(
             'choices' => $routes,
             'mapped' => false,
-            'property_path' => false,
+            'mapped' => false,
             'multiple' => false,
-            'expanded' => false));
+            'expanded' => false,
+            'attr' => array(
+                'autocomplete' => 'off')));
     }
 
 }

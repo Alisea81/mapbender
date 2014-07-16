@@ -2,6 +2,15 @@
 
 {% block title %}{{ 'mb.manager.admin.sources' | trans }}{% endblock %}
 
+{% block css %}
+  {{parent()}}
+  {% stylesheets filter="compass,cssrewrite"
+    "bundles/mapbendermanager/sass/manager/services.scss"
+  %}
+    <link rel="stylesheet" href="{{ asset_url }}" />
+  {% endstylesheets %}
+{% endblock %}
+
 {% block js %}
   {{parent()}}
   <script type="text/javascript" src="{{ asset('bundles/mapbendermanager/js/service-list.js') }}"></script>
@@ -19,7 +28,12 @@
       <li class="filterItem">
         <div class="col1">
           <span class="smallerText">{{ source.id }}</span><br>
-          <span class="smallerText">{{ source.type }}</span>
+          <span class="smallerText">{{ source.type }}</span><br>
+            {% if source.valid == true %}
+                <span class="iconStarO icon" title="{{"mb.manager.admin.source.valid"|trans}}"></span>
+            {% elseif source.valid is not null %}
+                <span class="iconWarningSmpl icon" title="{{"mb.manager.admin.source.notvalid"|trans}}"></span>
+            {% endif %}
         </div>
         <div class="col2 box">
           <a href="{{ url("mapbender_manager_repository_view",{"sourceId":source.id}) }}" class="title">{{ source.title }}<span class="smallerText"> {{ source.alias }}</span></a>

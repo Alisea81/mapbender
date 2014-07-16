@@ -3,6 +3,7 @@ namespace Mapbender\CoreBundle\Element;
 
 use Mapbender\CoreBundle\Component\Element;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Mapbender\PrintBundle\Component\OdgParser;
 
 /**
@@ -45,12 +46,12 @@ class PrintClient extends Element
     /**
      * @inheritdoc
      */
-    public function getAssets()
+    static public function listAssets()
     {
         return array('js' => array('mapbender.element.printClient.js',
                 '@FOMCoreBundle/Resources/public/js/widgets/popup.js',
                 '@FOMCoreBundle/Resources/public/js/widgets/dropdown.js'),
-            'css' => array(),
+            'css' => array('@MapbenderCoreBundle/Resources/public/sass/element/printclient.scss'),
             'trans' => array('MapbenderCoreBundle:Element:printclient.json.twig'));
     }
 
@@ -84,20 +85,24 @@ class PrintClient extends Element
                     "format" => "a3")
                 ,
                 array(
+                    'template' => "a4_landscape_offical",
+                    "label" => "A4 Landscape offical",
+                    "format" => "a4"),
+                array(
                     'template' => "a2_landscape_offical",
                     "label" => "A2 Landscape offical",
                     "format" => "a2")
-                ,
-                array(
-                    'template' => "a4_landscape_offical",
-                    "label" => "A4 Landscape offical",
-                    "format" => "a4")
             ),
             "scales" => array(500, 1000, 5000, 10000, 25000),
             "quality_levels" => array(array('dpi' => "72", 'label' => "Draft (72dpi)"),
-                array('dpi' => "288", 'label' => "Draft (288dpi)")),
+                array('dpi' => "288", 'label' => "Document (288dpi)")),
             "rotatable" => true,
-            "optional_fields" => null,
+            "optional_fields" => array(
+                            "title" => array("label" => 'Title', "options" => array("required" => false)),
+                            "comment1" => array("label" => 'Comment 1', "options" => array("required" => false)),
+                            "comment2" => array("label" => 'Comment 2', "options" => array("required" => false))
+                            ),            
+            "replace_pattern" => null,
             "file_prefix" => 'mapbender3'
         );
     }
@@ -210,13 +215,14 @@ class PrintClient extends Element
                 $url = $this->container->get('router')->generate('mapbender_print_print_service',
                     array(), true);
 
-                return $this->container->get('http_kernel')->forward(
-                        'OwsProxy3CoreBundle:OwsProxy:genericProxy',
-                        array(
-                        'url' => $url,
-                        'content' => $content
-                        )
+                $path = array(
+                    '_controller' => 'OwsProxy3CoreBundle:OwsProxy:genericProxy',
+                    'url' => $url,
+                    'content' => $content
                 );
+                $subRequest = $request->duplicate(array(), null, $path);
+                return $this->container->get('http_kernel')->handle(
+                        $subRequest, HttpKernelInterface::SUB_REQUEST);
 
             case 'queued':
 

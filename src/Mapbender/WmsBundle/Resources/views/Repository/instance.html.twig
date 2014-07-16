@@ -2,6 +2,15 @@
 
 {% block title %}{{ 'mb.wms.wmsloader.repo.instance.title.wmsinstance' | trans }} - {{ form.vars.value.title }}{% endblock %}
 
+{% block css %}
+  {{parent()}}
+  {% stylesheets filter="compass,cssrewrite"
+    "bundles/mapbendermanager/sass/manager/services.scss"
+  %}
+    <link rel="stylesheet" href="{{ asset_url }}" />
+  {% endstylesheets %}
+{% endblock %}
+
 {% block js %}
   {{parent()}}
   <script type="text/javascript" src="{{ asset('bundles/mapbendermanager/js/repository.js') }}"></script>
@@ -22,6 +31,8 @@
 
     <div class="metaData">
       <div class="left leftContainer">
+        {{ form_label(form.title) }}{{ form_widget(form.title) }}
+        <div class="clear"></div>
         {{ form_label(form.format) }}{{ form_widget(form.format) }}
         <div class="clear"></div>
         {{ form_label(form.infoformat) }}{{ form_widget(form.infoformat) }}
@@ -33,18 +44,25 @@
       </div>
 
       <div class="left rightContainer">
-          <div class="left">
+        <div class="left">
         {{ form_widget(form.visible) }}<label for="{{form.visible.vars.id}}" class="labelCheck">{{"mb.wms.wmsloader.repo.instance.label.visible"|trans}}</label>
         </div>
+        <div class="clear"></div>
         <div class="left">
         {{ form_widget(form.basesource) }}<label for="{{form.basesource.vars.id}}" class="labelCheck">{{"mb.wms.wmsloader.repo.instance.label.basesource"|trans}}</label>
         </div>
         <div class="clear"></div>
+        <div class="left">
         {{ form_widget(form.proxy) }}<label for="{{form.proxy.vars.id}}" class="labelCheck">{{"mb.wms.wmsloader.repo.instance.label.proxy"|trans}}</label>
+        </div>
         <div class="clear"></div>
+        <div class="left">
         {{ form_widget(form.transparency) }}<label for="{{form.transparency.vars.id}}" class="labelCheck">{{"mb.wms.wmsloader.repo.instance.label.transparency"|trans}}</label>
+        </div>
         <div class="clear"></div>
+        <div class="left">
         {{ form_widget(form.tiled) }}<label for="{{form.tiled.vars.id}}" class="labelCheck">{{"mb.wms.wmsloader.repo.instance.label.tiled"|trans}}</label>
+        </div>
         <div class="clear"></div>
       </div>
     </div>

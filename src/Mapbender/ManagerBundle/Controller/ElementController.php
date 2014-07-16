@@ -33,12 +33,35 @@ class ElementController extends Controller
      */
     public function selectAction($slug)
     {
-        $trans = $this->container->get('translator');
-        $elements = array();
-        foreach ($this->get('mapbender')->getElements() as $elementClassName) {
+        $application = $this->get('mapbender')->getApplicationEntity($slug);
+        $template    = $application->getTemplate();
+        $region      = $this->get('request')->get('region');
+        $whitelist   = null;
+        $classNames  = null;
+
+        //
+        // It's a quick solution for the Responsive template
+        // Each template should have a whitelist
+        //
+        if($template::getTitle() === 'Responsive'){
+            $whitelist = $template::getElementWhitelist();
+            $whitelist = $whitelist[$region];
+        }
+
+        $trans      = $this->container->get('translator');
+        $elements   = array();
+
+        //
+        // Get only the class names from the whitelist elements, otherwise
+        // get them all
+        //
+        $classNames = ($whitelist) ? $whitelist
+                                   : $this->get('mapbender')->getElements();
+
+        foreach ($classNames as $elementClassName) {
             $title = $trans->trans($elementClassName::getClassTitle());
             $tags = array();
-            foreach($elementClassName::getClassTags() as $tag){
+            foreach ($elementClassName::getClassTags() as $tag) {
                 $tags[] = $trans->trans($tag);
             }
             $elements[$title] = array(
@@ -47,10 +70,12 @@ class ElementController extends Controller
                 'description' => $trans->trans($elementClassName::getClassDescription()),
                 'tags' => $tags);
         }
+
         ksort($elements, SORT_LOCALE_STRING);
         return array(
             'elements' => $elements,
-            'region' => $this->get('request')->get('region'));
+            'region' => $region,
+            'whitelist_exists' => ($whitelist !== null)); // whitelist_exists variable can be removed, if every template supports whitelists
     }
 
     /**
@@ -109,10 +134,10 @@ class ElementController extends Controller
         $element->setApplication($application);
         $form = ComponentElement::getElementForm($this->container, $application,
                 $element);
-        $form['form']->bindRequest($this->get('request'));
+        $form['form']->bind($this->get('request'));
 
         if ($form['form']->isValid()) {
-            $em = $this->getDoctrine()->getEntityManager();
+            $em = $this->getDoctrine()->getManager();
             $query = $em->createQuery(
                 "SELECT e FROM MapbenderCoreBundle:Element e"
                 . " WHERE e.region=:reg AND e.application=:app");
@@ -130,7 +155,7 @@ class ElementController extends Controller
                 $application, array());
             $elComp = new $entity_class($appl, $this->container, $element);
             $elComp->postSave();
-            $this->get('session')->setFlash('success',
+            $this->get('session')->getFlashBag()->set('success',
                 'Your element has been saved.');
 
             return new Response('', 201);
@@ -190,10 +215,10 @@ class ElementController extends Controller
         $form = ComponentElement::getElementForm($this->container, $application,
                 $element);
 //        $form = $this->getElementForm($application, $element);
-        $form['form']->bindRequest($this->get('request'));
+        $form['form']->bind($this->get('request'));
 
         if ($form['form']->isValid()) {
-            $em = $this->getDoctrine()->getEntityManager();
+            $em = $this->getDoctrine()->getManager();
             $application = $element->getApplication();
             $application->setUpdated(new \DateTime());
             $em->persist($element);
@@ -204,13 +229,77 @@ class ElementController extends Controller
                 $application, array());
             $elComp = new $entity_class($appl, $this->container, $element);
             $elComp->postSave();
-            $this->get('session')->setFlash('success',
+            $this->get('session')->getFlashBag()->set('success',
                 'Your element has been saved.');
 
             return new Response('', 205);
         } else {
             return array(
                 'form' => $form['type']->getForm()->createView(),
+                'theme' => $form['theme'],
+                'assets' => $form['assets']);
+        }
+    }
+
+    /**
+     * @ManagerRoute("/application/{slug}/element/{id}/security", requirements={"id" = "\d+"})
+     * @Template("MapbenderManagerBundle:Element:security.html.twig")
+     */
+    public function securityAction($slug, $id)
+    {
+        $em = $this->getDoctrine()->getManager();
+
+        $application = $this->get('mapbender')->getApplicationEntity($slug);
+
+        $element = $this->getDoctrine()
+            ->getRepository('MapbenderCoreBundle:Element')
+            ->findOneById($id);
+
+        if (!$element) {
+            throw $this->createNotFoundException('The element with the id "'
+                . $id . '" does not exist.');
+        }
+        $em->detach($element); // prevent element from being stored with default config/stored again
+        if ($this->getRequest()->getMethod() === 'POST') {
+            $form = ComponentElement::getElementForm($this->container,
+                    $application, $element, true);
+            $request = $this->getRequest();
+            $form['form']->bind($request);
+            if ($form['form']->isValid()) {
+                $em->getConnection()->beginTransaction();
+                try {
+                    $application->setUpdated(new \DateTime('now'));
+                    $em->persist($application);
+
+                    $aclManager = $this->get('fom.acl.manager');
+                    $aclManager->setObjectACLFromForm($element,
+                        $form['form']->get('acl'), 'object');
+                    $em->flush();
+                    $em->getConnection()->commit();
+                    $this->get('session')->getFlashBag()->set('success',
+                        "Your element's access has been changed.");
+                } catch (\Exception $e) {
+                    $this->get('session')->getFlashBag()->set('error',
+                        "There was an error trying to change your element's access.");
+                    $em->getConnection()->rollback();
+                    $em->close();
+
+                    if ($this->container->getParameter('kernel.debug')) {
+                        throw($e);
+                    }
+                }
+            } else {
+                return array(
+                    'form' => $form['form']->createView(),
+                    'theme' => $form['theme'],
+                    'assets' => $form['assets']);
+            }
+        } else {
+
+            $form = ComponentElement::getElementForm($this->container,
+                    $application, $element, true);
+            return array(
+                'form' => $form['form']->createView(),
                 'theme' => $form['theme'],
                 'assets' => $form['assets']);
         }
@@ -261,7 +350,7 @@ class ElementController extends Controller
                 . $id . '" does not exist.');
         }
 
-        $em = $this->getDoctrine()->getEntityManager();
+        $em = $this->getDoctrine()->getManager();
         $query = $em->createQuery(
             "SELECT e FROM MapbenderCoreBundle:Element e"
             . " WHERE e.region=:reg AND e.application=:app"
@@ -282,7 +371,7 @@ class ElementController extends Controller
         $em->remove($element);
         $em->flush();
 
-        $this->get('session')->setFlash('success',
+        $this->get('session')->getFlashBag()->set('success',
             'Your element has been removed.');
 
         return new Response();
@@ -314,7 +403,7 @@ class ElementController extends Controller
                 array('Content-Type' => 'application/json'));
         }
         if ($element->getRegion() === $newregion) {
-            $em = $this->getDoctrine()->getEntityManager();
+            $em = $this->getDoctrine()->getManager();
             $element->setWeight($number);
             $em->persist($element);
             $em->flush();
@@ -353,7 +442,7 @@ class ElementController extends Controller
             $em->flush();
         } else {
             // handle old region
-            $em = $this->getDoctrine()->getEntityManager();
+            $em = $this->getDoctrine()->getManager();
             $query = $em->createQuery(
                 "SELECT e FROM MapbenderCoreBundle:Element e"
                 . " WHERE e.region=:reg AND e.application=:app"
@@ -427,7 +516,7 @@ class ElementController extends Controller
             $enabled_before = $element->getEnabled();
             $enabled = $enabled === "true" ? true : false;
             $element->setEnabled($enabled);
-            $em = $this->getDoctrine()->getEntityManager();
+            $em = $this->getDoctrine()->getManager();
             $em->persist($element);
             $em->flush();
             return new Response(json_encode(array(

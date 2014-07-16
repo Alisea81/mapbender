@@ -196,6 +196,12 @@ class WmsSource extends Source
     // FIXME: keywords cascade remove RM\OneToMany(targetEntity="Mapbender\CoreBundle\Entity\Keyword",mappedBy="id", cascade={"persist","remove"})
 
     /**
+     * @var ArrayCollections A list of WMS keywords
+     * @ORM\OneToMany(targetEntity="Mapbender\CoreBundle\Entity\Keyword",mappedBy="id", cascade={"persist"})
+     */
+    protected $keywords;
+
+    /**
      * @var ArrayCollections A list of WMS instances
      * @ORM\OneToMany(targetEntity="WmsInstance",mappedBy="source", cascade={"persist","remove"})
      * 
@@ -642,7 +648,7 @@ class WmsSource extends Source
     /**
      * Get getMap
      *
-     * @return RequestInformation 
+     * @return Object 
      */
     public function getGetMap()
     {
@@ -858,6 +864,40 @@ class WmsSource extends Source
     }
 
     /**
+     * Set keywords
+     *
+     * @param array $keywords
+     * @return Source
+     */
+    public function setKeywords($keywords)
+    {
+        $this->keywords = $keywords;
+        return $this;
+    }
+
+    /**
+     * Get keywords
+     *
+     * @return string 
+     */
+    public function getKeywords()
+    {
+        return $this->keywords;
+    }
+
+    /**
+     * Add keyword
+     *
+     * @param Keyword $keyword
+     * @return Source
+     */
+    public function addKeyword(Keyword $keyword)
+    {
+        $this->keywords->add($keyword);
+        return $this;
+    }
+
+    /**
      * Remove layers
      *
      * @param WmsLayerSource $layers
@@ -915,7 +955,7 @@ class WmsSource extends Source
         $instLayer_root->setInfo(Utils::getBool($queryable));
         $instLayer_root->setAllowinfo(Utils::getBool($queryable));
 
-        $instLayer_root->setToggle(true);
+        $instLayer_root->setToggle(false);
         $instLayer_root->setAllowtoggle(true);
 
         $instLayer_root->setPriority($num);
@@ -932,7 +972,7 @@ class WmsSource extends Source
      * @param integer $num
      * @param WmsIstance $instance
      */
-    private function addSublayer($instlayer, $wmslayer, $num, $instance)
+    private function addSublayer($instlayer, $wmslayer, &$num, $instance)
     {
         foreach ($wmslayer->getSublayer() as $wmssublayer) {
             $num++;
@@ -955,7 +995,7 @@ class WmsSource extends Source
             $instsublayer->setParent($instlayer);
             $instance->addLayer($instsublayer);
             if ($wmssublayer->getSublayer()->count() > 0) {
-                $instsublayer->setToggle(true);
+                $instsublayer->setToggle(false);
                 $instsublayer->setAllowtoggle(true);
             }
             $this->addSublayer($instsublayer, $wmssublayer, $num, $instance);
@@ -976,7 +1016,8 @@ class WmsSource extends Source
      * @param WmsLayerSource
      * @param EntityManager
      */
-    private function removeSourceRecursive(EntityManager $em, WmsLayerSource $wmslayer)
+    private function removeSourceRecursive(EntityManager $em,
+        WmsLayerSource $wmslayer)
     {
         foreach ($wmslayer->getSublayer() as $sublayer) {
             $this->removeSourceRecursive($em, $sublayer);

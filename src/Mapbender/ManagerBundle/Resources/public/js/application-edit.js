@@ -203,7 +203,8 @@ $(function() {
             subtitle: " - " + Mapbender.trans(self.parent().siblings(".subTitle").text()),
             closeOnOutsideClick: true,
             cssClass:"elementPopup",
-            height: 450,
+            height: 550,
+            width: 550,
             content: [
                 $.ajax({
                     url: self.attr("href"),
@@ -220,14 +221,18 @@ $(function() {
                     label: Mapbender.trans("mb.manager.components.popup.add_element.btn.cancel"),
                     cssClass: 'button buttonCancel critical right',
                     callback: function() {
-                        popup.close();
+                        console.log("XXX");
+                        $("#elementForm").data('dirty', false);
+                        this.close();
                     }
                 },
                 'ok': {
                     label: Mapbender.trans("mb.manager.components.popup.add_element.btn.ok"),
                     cssClass: 'button buttonYes right',
                     callback: function() {
-                       $("#elementForm").submit();
+                       $("#elementForm")
+                        .data('dirty', false)
+                        .submit();
                        return false;
                     }
                 },
@@ -235,6 +240,7 @@ $(function() {
                     label: Mapbender.trans("mb.manager.components.popup.add_element.btn.back"),
                     cssClass: 'button left buttonBack',
                     callback: function() {
+                        $("#elementForm").data('dirty', false);
                         $(".popupSubContent").remove();
                         $(".popupSubTitle").text("");
                         $(".popup").find(".buttonYes, .buttonBack").hide();
@@ -244,6 +250,18 @@ $(function() {
             }
         });
 
+        var onChange = function(event) {
+            $('#elementForm', popup.$element).data('dirty', true);
+            popup.$element.off('change', onChange);
+        };
+        popup.$element.on('change', onChange);
+        popup.$element.on('close', function(event, token) {
+            if(true === $('#elementForm', popup.$element).data('dirty')) {
+                if(!confirm('Ignore Changes?')) {
+                    token.cancel = true;
+                }
+            }
+        });
         return false;
     });
 
@@ -257,7 +275,8 @@ $(function() {
         popup = new Mapbender.Popup2({
             title:Mapbender.trans("mb.manager.components.popup.edit_element.title"),
             closeOnOutsideClick: true,
-            height: 450,
+            height: 550,
+            width: 550,
             content: [
                 $.ajax({
                     url: self.attr("data-url"),
@@ -273,6 +292,7 @@ $(function() {
                     label: Mapbender.trans("mb.manager.components.popup.edit_element.btn.cancel"),
                     cssClass: 'button buttonCancel critical right',
                     callback: function() {
+                        $("#elementForm").data('dirty', false);
                         this.close();
                     }
                 },
@@ -280,10 +300,175 @@ $(function() {
                     label: Mapbender.trans("mb.manager.components.popup.edit_element.btn.ok"),
                     cssClass: 'button right',
                     callback: function() {
-                        $("#elementForm").submit();
+                        $("#elementForm")
+                            .data('dirty', false)
+                            .submit();
                         window.setTimeout(function() {
                             window.location.reload();
                         }, 50);
+                    }
+                }
+            }
+        });
+
+        var onChange = function(event) {
+            $('#elementForm', popup.$element).data('dirty', true);
+            popup.$element.off('change', onChange);
+        };
+        popup.$element.on('change', onChange);
+        popup.$element.on('close', function(event, token) {
+            if(true === $('#elementForm', popup.$element).data('dirty')) {
+                if(!confirm('Ignore Changes?')) {
+                    token.cancel = true;
+                }
+            }
+        });
+        return false;
+    });
+
+    // Element security
+    $(".secureElement").bind("click", function() {
+        var self = $(this),
+            toremove = null;
+
+        if(popup){
+            popup = popup.destroy();
+        }
+        popup = new Mapbender.Popup2({
+            title:"Secure element",
+            closeOnOutsideClick: true,
+            height: 600,
+            content: [
+                $.ajax({
+                    url: self.attr("data-url"),
+                    complete: function(){
+                        $('#addElmPermission').on('click', function(e){
+                            $.ajax({
+                                url: $(e.target).attr("href"),
+                                type: "GET",
+                                success: function(data, textStatus, jqXHR) {
+                                    $(".contentItem:first,.buttonOk", popup.$element).addClass('hidden');
+                                    $(".buttonAdd,.buttonBack", popup.$element).removeClass('hidden');
+                                    popup.addContent(data);
+                                    var groupUserItem, text, me, groupUserType;
+
+                                    $("#listFilterGroupsAndUsers", popup.$element).find(".filterItem").each(function(i, e){
+
+                                        groupUserItem = $(e);
+                                        groupUserType = (groupUserItem.find(".tdContentWrapper")
+                                                                      .hasClass("iconGroup") ? "iconGroup"
+                                                                                             : "iconUser");
+                                        $("#permissionsBody", popup.$element).find(".labelInput").each(function(i, e){
+                                            me = $(e);
+                                            text = me.text().trim();
+                                            if((groupUserItem.text().trim().toUpperCase().indexOf(text.toUpperCase()) >= 0) &&
+                                               (me.parent().hasClass(groupUserType))){
+                                                groupUserItem.remove();
+                                            }
+                                        });
+                                    });
+                                }
+                            });
+                            return false;
+                        });
+                        $("#permissionsBody", popup.$element).on("click", '.iconRemove', function(e){
+                            var self = $(e.target);
+                            var parent = self.parent().parent();
+                            var userGroup = ((parent.find(".iconUser").length == 1) ? "user " : "group ") + parent.find(".labelInput").text();
+                            popup.addContent(Mapbender.trans('fom.core.components.popup.delete_user_group.content',{'userGroup': userGroup}));
+                            toremove = parent;
+                            $(".contentItem:first,.buttonOk", popup.$element).addClass('hidden');
+                            $(".buttonRemove,.buttonBack", popup.$element).removeClass('hidden');
+                        });
+                    }
+                })
+            ],
+            buttons: {
+                'cancel': {
+                    label: Mapbender.trans('mb.manager.components.popup.element_acl.btn.cancel'),
+                    cssClass: 'button buttonCancel critical right',
+                    callback: function() {
+                        toremove = null;
+                        this.close();
+                    }
+                },
+                'ok': {
+                    label: Mapbender.trans('mb.manager.components.popup.element_acl.btn.ok'),
+                    cssClass: 'button buttonOk right',
+                    callback: function() {
+                        toremove = null;
+                        $("#elementSecurity", popup.$element).submit();
+                        window.setTimeout(function() {
+                            window.location.reload();
+                        }, 50);
+                    }
+                },
+                'add': {
+                    label: Mapbender.trans('mb.manager.components.popup.element_acl.btn.add'),//Mapbender.trans("mb.wmc.element.wmceditor.popup.btn.back"),
+                    cssClass: 'button right buttonAdd hidden',
+                    callback: function(){
+                        toremove = null;
+                        $(".contentItem:first", popup.$element).removeClass('hidden');
+                        if($(".contentItem", popup.$element).length > 1){
+                            var proto = $(".contentItem:first #permissionsHead", popup.$element).attr("data-prototype");
+                            if(proto.length > 0){
+                                var body  = $(".contentItem:first #permissionsBody", popup.$element);
+                                var count = body.find("tr").length;
+                                var text, val, parent, newEl;
+                                $("#listFilterGroupsAndUsers", popup.$element).find(".iconCheckboxActive").each(function(i, e){
+                                    parent   = $(e).parent();
+                                    text     = parent.find(".labelInput").text().trim();
+                                    val      = parent.find(".hide").text().trim();
+                                    userType = parent.hasClass("iconGroup") ? "iconGroup" : "iconUser";
+                                    newEl = body.prepend(proto.replace(/__name__/g, count))
+                                                .find("tr:first");
+
+                                    newEl.addClass("new").find(".labelInput").text(text);
+                                    newEl.find(".input").attr("value", val);
+                                    newEl.find(".view.checkWrapper").trigger("click");
+                                    newEl.find(".userType")
+                                         .removeClass("iconGroup")
+                                         .removeClass("iconUser")
+                                         .addClass(userType);
+                                    ++count;
+                                });
+                            }
+                            $('.contentItem:first .permissionsTable', popup.$element).removeClass('hidePermissions');
+                            $('.contentItem:first #permissionsDescription', popup.$element).addClass('hidden');
+
+                            $(".contentItem:not(.contentItem:first)", popup.$element).remove();
+                        }
+                        $(".buttonAdd, .buttonBack", popup.$element).addClass('hidden');
+                        $(".buttonOk", popup.$element).removeClass('hidden');
+                    }
+                },
+                'remove': {
+                    label: Mapbender.trans('mb.manager.components.popup.element_acl.btn.remove'),//Mapbender.trans("mb.wmc.element.wmceditor.popup.btn.back"),
+                    cssClass: 'button right buttonRemove hidden',
+                    callback: function(){
+                        $(".contentItem:first", popup.$element).removeClass('hidden');
+                        if(toremove !== null){
+                            toremove.remove();
+                        }
+                        toremove = null;
+                        if($(".contentItem", popup.$element).length > 1){
+                            $(".contentItem:not(.contentItem:first)", popup.$element).remove();
+                        }
+                        $(".buttonAdd,.buttonBack,.buttonRemove", popup.$element).addClass('hidden');
+                        $(".buttonOk", popup.$element).removeClass('hidden');
+                    }
+                },
+                'back': {
+                    label: Mapbender.trans('mb.manager.components.popup.element_acl.btn.back'),//Mapbender.trans("mb.wmc.element.wmceditor.popup.btn.back"),
+                    cssClass: 'button left buttonBack hidden',
+                    callback: function(){
+                        toremove = null;
+                        $(".contentItem:first", popup.$element).removeClass('hidden');
+                        if($(".contentItem", popup.$element).length > 1){
+                            $(".contentItem:not(.contentItem:first)", popup.$element).remove();
+                        }
+                        $(".buttonAdd,.buttonBack,.buttonRemove", popup.$element).addClass('hidden');
+                        $(".buttonOk", popup.$element).removeClass('hidden');
                     }
                 }
             }

@@ -6,7 +6,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolverInterface;
 
 /**
- * 
+ *
  */
 class GpsPositionAdminType extends AbstractType
 {
@@ -43,9 +43,11 @@ class GpsPositionAdminType extends AbstractType
                 'application' => $options['application'],
                 'property_path' => '[target]',
                 'required' => false))
-            ->add('icon', 'text', array('required' => false))
+            ->add('icon', new IconClassType(), array('required' => false))
             ->add('action', 'text', array('required' => false))
-            ->add('refreshinterval', 'text', array('required' => false));
+            ->add('refreshinterval', 'text', array('required' => false))
+            ->add('follow', 'checkbox', array(
+                'property_path' => '[follow]'));
     }
 
 }

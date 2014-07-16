@@ -1,7 +1,29 @@
+/**
+ * This prevents OpenLayers making GetMap requests when the LAYER parameter is empty.
+ *
+ * This is done by adding a test to the in-range calculation which tests the length of
+ * the layers parameter.
+ *
+ * @return {Boolean} Whether the layer is in range or not
+ */
+OpenLayers.Layer.WMS.prototype.calculateInRange = function() {
+    if(!this.params.LAYERS || 0 === this.params.LAYERS.length) {
+        // explicitely hide DOM element for this layer
+        this.display(false);
+        return false;
+    };
+    return OpenLayers.Layer.prototype.calculateInRange.apply(this, arguments);
+}
+
 var Mapbender = Mapbender || {};
 $.extend(true, Mapbender, {
     source: {
         'wms': {
+            defaultMqLayer: {
+                type: 'wms',
+                noMagic: true,
+                transitionEffect: 'resize'
+            },
             create: function(layerDef){
                 var self = this;
                 var rootLayer = layerDef.configuration.children[0];
@@ -31,10 +53,8 @@ $.extend(true, Mapbender, {
                 }
 
                 var mqLayerDef = {
-                    type: 'wms',
                     label: layerDef.title,
                     url: finalUrl,
-                    noMagic: true,
                     transparent: layerDef.configuration.options.transparent,
                     format: layerDef.configuration.options.format,
                     isBaseLayer: layerDef.configuration.options.baselayer,
@@ -45,7 +65,7 @@ $.extend(true, Mapbender, {
                     minScale: rootLayer.minScale,
                     maxScale: rootLayer.maxScale
                 };
-
+                $.extend(mqLayerDef, Mapbender.source.wms.defaultMqLayer);
                 return mqLayerDef;
             },
             _addProxy: function(url){
@@ -637,26 +657,7 @@ $.extend(true, Mapbender, {
                             }
                         };
                     }
-                    if(layer.options.minScale){
-                        if(layer.options.minScale <= scale){
-                            layer.state.outOfScale = false;
-                        }else{
-                            layer.state.outOfScale = true;
-                        }
-                    }else{
-                        layer.state.outOfScale = false;
-                    }
-                    if(!layer.state.outOfScale){
-                        if(layer.options.maxScale){
-                            if(layer.options.maxScale > scale){
-                                layer.state.outOfScale = false;
-                            }else{
-                                layer.state.outOfScale = true;
-                            }
-                        }else{
-                            layer.state.outOfScale = false;
-                        }
-                    }
+                    layer.state.outOfScale = (layer.options.minScale ? layer.options.minScale <= scale : true) && (layer.options.maxScale ? layer.options.maxScale > scale : true) ? false : true;
                     /* @TODO outOfBounds for layers ?  */
                     if(layer.children){
                         if(parentState.state.visibility

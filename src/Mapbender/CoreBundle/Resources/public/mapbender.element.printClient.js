@@ -33,7 +33,14 @@
 
         _setup: function(){
             this.map = $('#' + this.options.target).data('mapbenderMbMap');
-
+            
+            $('input[name="scale_text"],select[name="scale_select"], input[name="rotation"]', this.element)
+                .on('change', $.proxy(this._updateGeometry, this));
+            $('input[name="scale_text"], input[name="rotation"]', this.element)
+                .on('keyup', $.proxy(this._updateGeometry, this));
+            $('select[name="template"]', this.element)
+                .on('change', $.proxy(this._getPrintSize, this));
+            
             this._trigger('ready');
             this._ready();
         },
@@ -54,10 +61,10 @@
                         header: true,
                         modal: false,
                         closeButton: false,
-                        closeOnPopupCloseClick: false,
                         closeOnESC: false,
                         content: self.element,
-                        width: 340,
+                        width: 360,
+                        height: 370,
                         cssClass: 'customPrintDialog',
                         buttons: {
                                 'cancel': {
@@ -76,22 +83,15 @@
                                 }
                         }
                     });
+                this.popup.$element.on('close', $.proxy(this.close, this));
              } else {
                  if (this.popupIsOpen === false){
                     this.popup.open(self.element);
                  }
             }
             me.show();
-
-            $('input[name="scale_text"],select[name="scale_select"], input[name="rotation"]', this.element)
-            .bind('change', $.proxy(this._updateGeometry, this));
-            $('input[name="scale_text"], input[name="rotation"]', this.element)
-            .bind('keyup', $.proxy(this._updateGeometry, this));
-            $('select[name="template"]', this.element)
-            .bind('change', $.proxy(this._getPrintSize, this))
-            .trigger('change');
-
             this.popupIsOpen = true;
+            this._getPrintSize();
             this._loadPrintFormats();
             this._updateElements();
             this._updateGeometry(true);
@@ -112,46 +112,13 @@
 
         _loadPrintFormats: function() {
             var self = this;
-            var count = 0;
-            var quality_levels = this.options.quality_levels;
-            var quality = $('select[name="quality"]', this.element);
-            var list = quality.siblings(".dropdownList");
-            var valueContainer = quality.siblings(".dropdownValue");
-            list.empty();
-            quality.empty();
-            if (null === quality_levels){
-                quality.parent().hide();
-            } else {
-                for(key in quality_levels) {
-                    quality.append($('<option></option>', {
-                        'value': key,
-                        'html': quality_levels[key],
-                        'class': "opt-" + count
-                    }));
-                    list.append($('<li></li>', {
-                        'html': quality_levels[key],
-                        'class': "item-" + count
-                    }));
-
-                    if(count == 0){
-                        valueContainer.text(quality_levels[key]);
-                    }
-
-                    count++;
-                }
-                if(count < 2) {
-                    quality.parent().hide();
-                } else {
-                    quality.parent().show();
-                }
-            }
 
             var scale_text = $('input[name="scale_text"]', this.element),
             scale_select = $('select[name="scale_select"]', this.element);
-            list = scale_select.siblings(".dropdownList");
+            var list = scale_select.siblings(".dropdownList");
             list.empty();
             var valueContainer = scale_select.siblings(".dropdownValue");
-            count = 0;
+            var count = 0;
             if(null === this.options.scales) {
                 var scale = 5000;
                 scale_text.val(scale).parent().show();
@@ -212,7 +179,7 @@
                 for(var field in opt_fields){
                     var span = '';
                     if(opt_fields[field].options.required === true){
-                       span = '<span class="required">*</span>'
+                       span = '<span class="required">*</span>';
                     }
 
                     extra_fields.append($('<label></label>', {
@@ -241,9 +208,13 @@
                 height = this.height,
                 scale = this._getPrintScale(),
                 rotationField = $('input[name="rotation"]');
-            
-            if (rotationField.val() === '' && this.rotateValue !== '0'){
-                rotationField.val('0'); 
+                
+            // remove all not numbers from input
+            rotationField.val(rotationField.val().replace(/[^\d]+/,''));
+                
+                
+            if (rotationField.val() === '' && this.rotateValue > '0'){
+                rotationField.val('0');
             }
             var rotation = $('input[name="rotation"]').val();
             this.rotateValue = rotation;
@@ -260,7 +231,7 @@
                 if(null !== this.lastRotation) {
                     $('input[name="rotation"]').val(this.lastRotation).change();
                 }
-                return;
+                //return;
             }
             rotation= parseInt(-rotation);
 
@@ -424,7 +395,7 @@
                 name: 'file_prefix',
                 value: file_prefix
             }));
-            
+
             // koordinaten fuer extent feature mitschicken
             var feature_coords = new Array();
             var feature_comp = this.feature.geometry.components[0].components;
@@ -433,12 +404,12 @@
                 feature_coords[i]['x'] = feature_comp[i].x;
                 feature_coords[i]['y'] = feature_comp[i].y;
             }
-            
+
             $.merge(fields, $('<input />', {
                 type: 'hidden',
                 name: 'extent_feature',
                 value: JSON.stringify(feature_coords)
-            }));        
+            }));
             var schalter = 0;
             // layer auslesen
             var sources = this.map.getSourceTree(), lyrCount = 0;
@@ -446,7 +417,7 @@
             for (var i = 0; i < sources.length; i++) {
                 var layer = this.map.map.layersList[sources[i].mqlid],
                 type = layer.olLayer.CLASS_NAME;
-                
+
                 if (schalter === 1 && layer.olLayer.params.LAYERS.length === 0){
                     continue;
                 }
@@ -454,7 +425,7 @@
                 if (0 !== type.indexOf('OpenLayers.Layer.')) {
                     continue;
                 }
-                
+
                 if (layer.olLayer.type === 'vector') {
                     // Vector layers are all the same:
                     //   * Get all features as GeoJSON
@@ -465,14 +436,14 @@
                             scale = this._getPrintScale(),
                             toChangeOpts = {options: {children: {}}, sourceIdx: {mqlid: source.mqlid}};
                     var visLayers = Mapbender.source[source.type].changeOptions(source, scale, toChangeOpts);
-                    if (visLayers.layers.length > 0){            
+                    if (visLayers.layers.length > 0){
                         var prevLayers = layer.olLayer.params.LAYERS;
                         layer.olLayer.params.LAYERS = visLayers.layers;
-                        
+
                         var opacity = sources[i].configuration.options.opacity;
                         var lyrConf = Mapbender.source[sources[i].type].getPrintConfig(layer.olLayer, this.map.map.olMap.getExtent(), sources[i].configuration.options.proxy);
                         lyrConf.opacity = opacity;
-                        
+
                         $.merge(fields, $('<input />', {
                             type: 'hidden',
                             name: 'layers[' + lyrCount + ']',
@@ -480,8 +451,8 @@
                         }));
                         layer.olLayer.params.LAYERS = prevLayers;
                         lyrCount++;
-                    }    
-                }             
+                    }
+                }
             }
 
             // overview map
@@ -533,10 +504,10 @@
                     }));
                 c++;
             }
-            
+
             // replace pattern
             
-            if (this.options.replace_pattern === 'undefined'){
+            if (typeof this.options.replace_pattern !== 'undefined' && this.options.replace_pattern !== null){
                 for(var i = 0; i < this.options.replace_pattern.length; i++) {
                     $.merge(fields, $('<input />', {
                         type: 'hidden',
@@ -544,11 +515,11 @@
                         value: JSON.stringify(this.options.replace_pattern[i])
                     }));
                 }
-            }           
-                     
+            }
+
             $('div#layers').empty();
             fields.appendTo(form.find('div#layers'));
-            
+
             // Post in neuen Tab (action bei form anpassen)
             var url =  Mapbender.configuration.application.urls.element + '/' + this.element.attr('id') + '/direct';
 
@@ -562,10 +533,10 @@
                 //click hidden submit button to check requierd fields
                 this._checkFields()
                 form.find('input[type="submit"]').click();
-                
+
             }
         },
-                
+
         _checkFields: function(){
             $('#formats input[required]').on('change invalid', function() {
             var textfield = $(this).get(0);
@@ -581,7 +552,7 @@
 
         _getPrintSize: function() {
             var self = this;
-            var template = $('select[name="template"]', this.element).val();
+            var template = $('select[name="template"]', this.element).val(),
             data = {
                 template: template
             };
@@ -599,7 +570,7 @@
                 }
             });
         },
-        
+
         _extractGeometriesFromFeature: function(feature) {
             var coords = [],
                 type;
@@ -624,14 +595,14 @@
                 }else{
                     onScreen = false;
                 }
-            });         
+            });
             if (onScreen === false){
                 return;
-            }         
+            }
             var feature = {};
             feature.geom = coords[0];
             feature.type = type;
-            
+
             return feature;
         },
 
@@ -650,7 +621,7 @@
             });
             return $.map(layers, $.proxy(self._extractGeometriesFromLayer, this));
         },
-        
+
         /**
          *
          */

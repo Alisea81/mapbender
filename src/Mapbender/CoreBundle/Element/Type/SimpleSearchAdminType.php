@@ -41,6 +41,14 @@ class SimpleSearchAdminType extends AbstractType
                 'label' => 'Query key format',
                 'property_path' => '[query_format]',
                 'required' => true))
+            ->add('token_regex_in', 'text', array(
+                'label' => 'Token search (JavaScript regex)',
+                'property_path' => '[token_regex_in]',
+                'required' => false))
+            ->add('token_regex_out', 'text', array(
+                'label' => 'Token replace (JavaScript regex)',
+                'property_path' => '[token_regex_out]',
+                'required' => false))
             ->add('collection_path', 'text', array(
                 'property_path' => '[collection_path]',
                 'required' => false))
@@ -64,6 +72,10 @@ class SimpleSearchAdminType extends AbstractType
             ->add('result_minscale', 'number', array(
                 'property_path' => '[result][minscale]'))
             ->add('result_maxscale', 'number', array(
-                'property_path' => '[result][maxscale]'));
+                'property_path' => '[result][maxscale]'))
+            ->add('result_icon_url', 'text', array(
+                'property_path' => '[result][icon_url]'))
+            ->add('result_icon_offset', 'text', array(
+                'property_path' => '[result][icon_offset]'));
     }
 }

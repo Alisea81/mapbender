@@ -5,7 +5,7 @@ namespace Mapbender\CoreBundle\Element;
 use Mapbender\CoreBundle\Component\Element;
 
 /**
- * 
+ *
  */
 class GpsPosition extends Element
 {
@@ -41,13 +41,13 @@ class GpsPosition extends Element
     /**
      * @inheritdoc
      */
-    public function getAssets()
+    static public function listAssets()
     {
         return array(
             'js' => array(
                 'mapbender.element.button.js',
                 'mapbender.element.gpsPosition.js'),
-            'css' => array(),
+            'css' => array('@MapbenderCoreBundle/Resources/public/sass/element/gpsposition.scss'),
             'trans' => array('MapbenderCoreBundle:Element:gpsposition.json.twig'));
     }
 
@@ -58,7 +58,7 @@ class GpsPosition extends Element
     {
         return 'Mapbender\CoreBundle\Element\Type\GpsPositionAdminType';
     }
-    
+
     /**
      * @inheritdoc
      */
@@ -70,9 +70,10 @@ class GpsPosition extends Element
             'autoStart' => false,
             'target' => null,
             'icon' => null,
-            'refreshinterval' => '5000');
+            'refreshinterval' => '5000',
+            'follow' => false);
     }
-    
+
     /**
      * @inheritdoc
      */
