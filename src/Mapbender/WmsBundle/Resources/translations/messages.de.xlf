@@ -460,7 +460,7 @@
       </trans-unit>
       <trans-unit id="62be339a16eb03f936fbf6f412dc717a" resname="mb.wms.wmsloader.repo.form.label.serviceurl">
         <source>mb.wms.wmsloader.repo.form.label.serviceurl</source>
-        <target>Dienste-URL</target>
+        <target>Dienst-URL</target>
       </trans-unit>
       <trans-unit id="3f7db4515f7b6274c1da02b1b151971a" resname="mb.wms.wmsloader.repo.form.label.username">
         <source>mb.wms.wmsloader.repo.form.label.username</source>

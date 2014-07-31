@@ -12,10 +12,18 @@
 {% endblock %}
 
 {% block manager_content %}
-
+<div id="serviceTabContainer" class="tabContainer">
+<ul class="tabs">
 {% for manager in managers %}
-  {% render controller(manager.startAction) %}
-  <div class="clearContainer"></div>
+<li id="tab{{ manager.id }}" class="tab{% if loop.first %} active{% endif %}">{{ manager.label }}</li>
 {% endfor %}
-
+</ul>
+{% for manager in managers %}
+<div id="container{{ manager.id }}" class="container serviceAddBox{% if loop.first %} active{% endif %}">
+  {% render controller(manager.startAction) %}
+</div>
+<div class="clearContainer"></div>
+{% endfor %}
+</div>
+<div class="clearContainer"></div>
 {% endblock %}

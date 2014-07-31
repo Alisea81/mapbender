@@ -1,0 +1,18 @@
+{% extends "FOMManagerBundle::manager.html.twig" %}
+
+{% block title %}{{ 'mb.wmts.wmtsloader.repo.new.label.addservice' | trans }}{% endblock %}
+
+{% block css %}
+  {{parent()}}
+  {% stylesheets filter="compass,cssrewrite"
+    "bundles/mapbendermanager/sass/manager/services.scss"
+  %}
+    <link rel="stylesheet" href="{{ asset_url }}" />
+  {% endstylesheets %}
+{% endblock %}
+
+{% block manager_content %}
+
+    {% include 'MapbenderWmtsBundle:Repository:form.html.twig' %}
+
+{% endblock %}
